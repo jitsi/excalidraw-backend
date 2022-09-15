@@ -2,6 +2,7 @@ import debug from "debug";
 import express from "express";
 import http from "http";
 import socketIO from "socket.io";
+import * as prometheus from "socket.io-prometheus-metrics";
 
 const serverDebug = debug("server");
 const ioDebug = debug("io");
@@ -39,6 +40,11 @@ const io = socketIO(server, {
     res.writeHead(200, headers);
     res.end();
   },
+});
+
+// listens on host:9090/metrics
+prometheus.metrics(io, {
+  collectDefaultMetrics: true
 });
 
 io.on("connection", (socket) => {
