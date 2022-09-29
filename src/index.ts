@@ -2,7 +2,7 @@ import debug from 'debug';
 import dotenv from 'dotenv';
 import express from 'express';
 import http from 'http';
-import socketIO from 'socket.io';
+import { Server } from 'socket.io';
 import * as prometheus from 'socket.io-prometheus-metrics';
 
 const serverDebug = debug('server');
@@ -30,18 +30,7 @@ server.listen(port, () => {
     serverDebug(`listening on port: ${port}`);
 });
 
-const io = socketIO(server, {
-    handlePreflightRequest: (req, res) => {
-        const headers = {
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Access-Control-Allow-Origin': req.header?.origin ?? 'https://meet.jit.si',
-            'Access-Control-Allow-Credentials': true
-        };
-
-        res.writeHead(200, headers);
-        res.end();
-    }
-});
+const io = new Server(server);
 
 // listens on host:9090/metrics
 prometheus.metrics(io, {
@@ -54,15 +43,12 @@ io.on('connection', socket => {
     socket.on('join-room', roomID => {
         socketDebug(`${socket.id} has joined ${roomID}`);
         socket.join(roomID);
-        if (io.sockets.adapter.rooms[roomID].length <= 1) {
+        if (io.sockets.adapter.rooms.get(roomID)?.size ?? 0 <= 1) {
             io.to(`${socket.id}`).emit('first-in-room');
         } else {
             socket.broadcast.to(roomID).emit('new-user', socket.id);
         }
-        io.in(roomID).emit(
-      'room-user-change',
-      Object.keys(io.sockets.adapter.rooms[roomID].sockets)
-        );
+        io.in(roomID).emit('room-user-change', Array.from(io.sockets.adapter.rooms.get(roomID) ?? []));
     });
 
     socket.on(
@@ -87,7 +73,7 @@ io.on('connection', socket => {
         const rooms = io.sockets.adapter.rooms;
 
         for (const roomID of Object.keys(socket.rooms)) {
-            const clients = Object.keys(rooms[roomID].sockets).filter(id => id !== socket.id);
+            const clients = Array.from(rooms.get(roomID) ?? []).filter(id => id !== socket.id);
 
             if (clients.length > 0) {
                 socket.broadcast.to(roomID).emit('room-user-change', clients);
