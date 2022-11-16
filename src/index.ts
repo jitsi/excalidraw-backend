@@ -4,6 +4,7 @@ import express from 'express';
 import http from 'http';
 import socketIO from 'socket.io';
 import * as prometheus from 'socket.io-prometheus-metrics';
+import v8 from 'v8';
 
 const serverDebug = debug('server');
 const ioDebug = debug('io');
@@ -20,6 +21,11 @@ const port = process.env.PORT || 80; // default port to listen
 
 app.get('/', (req, res) => {
     res.send('Excalidraw backend is up :)');
+});
+
+app.get('/heapdump', (req, res) => {
+    v8.writeHeapSnapshot();
+    res.send('Snapshot taken\n');
 });
 
 const server = http.createServer(app);
