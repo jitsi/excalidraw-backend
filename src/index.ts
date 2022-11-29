@@ -47,10 +47,10 @@ prometheus.metrics(io, {
 });
 
 io.on('connection', socket => {
-    ioDebug('connection established!');
+    serverDebug(`connection established! ${socket.conn.request.url}`);
     io.to(`${socket.id}`).emit('init-room');
     socket.on('join-room', roomID => {
-        socketDebug(`${socket.id} has joined ${roomID}`);
+        serverDebug(`${socket.id} has joined ${roomID} for url ${socket.conn.request.url}`);
         socket.join(roomID);
         if (io.sockets.adapter.rooms[roomID].length <= 1) {
             io.to(`${socket.id}`).emit('first-in-room');
@@ -66,7 +66,7 @@ io.on('connection', socket => {
     socket.on(
     'server-broadcast',
     (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
-        socketDebug(`${socket.id} sends update to ${roomID}`);
+        serverDebug(`${socket.id} sends update to ${roomID}`);
         socket.broadcast.to(roomID).emit('client-broadcast', encryptedData, iv);
     }
     );
@@ -74,7 +74,7 @@ io.on('connection', socket => {
     socket.on(
     'server-volatile-broadcast',
     (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
-        socketDebug(`${socket.id} sends volatile update to ${roomID}`);
+        serverDebug(`${socket.id} sends volatile update to ${roomID}`);
         socket.volatile.broadcast
         .to(roomID)
         .emit('client-broadcast', encryptedData, iv);
