@@ -6,8 +6,6 @@ import socketIO from 'socket.io';
 import * as prometheus from 'socket.io-prometheus-metrics';
 
 const serverDebug = debug('server');
-const ioDebug = debug('io');
-const socketDebug = debug('socket');
 
 dotenv.config(
   process.env.NODE_ENV === 'development'
@@ -74,7 +72,6 @@ io.on('connection', socket => {
     socket.on(
     'server-volatile-broadcast',
     (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
-        serverDebug(`${socket.id} sends volatile update to ${roomID}`);
         socket.volatile.broadcast
         .to(roomID)
         .emit('client-broadcast', encryptedData, iv);
