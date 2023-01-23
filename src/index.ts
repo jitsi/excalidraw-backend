@@ -64,7 +64,6 @@ io.on('connection', socket => {
     socket.on(
     'server-broadcast',
     (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
-        serverDebug(`${socket.id} sends update to ${roomID}`);
         socket.broadcast.to(roomID).emit('client-broadcast', encryptedData, iv);
     }
     );
