@@ -36,7 +36,8 @@ const io = socketIO(server, {
 
         res.writeHead(200, headers);
         res.end();
-    }
+    },
+    perMessageDeflate: true
 });
 
 // listens on host:9090/metrics
@@ -56,16 +57,16 @@ io.on('connection', socket => {
             socket.broadcast.to(roomID).emit('new-user', socket.id);
         }
         io.in(roomID).emit(
-      'room-user-change',
-      Object.keys(io.sockets.adapter.rooms[roomID].sockets)
+            'room-user-change',
+            Object.keys(io.sockets.adapter.rooms[roomID].sockets)
         );
     });
 
     socket.on(
     'server-broadcast',
-    (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
-        socket.broadcast.to(roomID).emit('client-broadcast', encryptedData, iv);
-    }
+        (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
+            socket.broadcast.to(roomID).emit('client-broadcast', encryptedData, iv);
+        }
     );
 
     socket.on(
@@ -83,13 +84,20 @@ io.on('connection', socket => {
         for (const roomID of Object.keys(socket.rooms)) {
             const clients = Object.keys(rooms[roomID].sockets).filter(id => id !== socket.id);
 
+            if (roomID !== socket.id) {
+                socket.to(roomID).emit('user has left', socket.id);
+            }
+
             if (clients.length > 0) {
                 socket.broadcast.to(roomID).emit('room-user-change', clients);
             }
         }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', reason => {
+        serverDebug(
+            `${socket.id} was disconnected from url ${socket.conn.request.url} for the following reason: ${reason}`
+        );
         socket.removeAllListeners();
     });
 });
