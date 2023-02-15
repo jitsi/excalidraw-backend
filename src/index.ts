@@ -37,7 +37,7 @@ const io = socketIO(server, {
         res.writeHead(200, headers);
         res.end();
     },
-    maxHttpBufferSize: 5e6,
+    maxHttpBufferSize: 2e6,
     pingTimeout: 10000
 });
 
