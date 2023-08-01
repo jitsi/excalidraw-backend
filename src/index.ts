@@ -37,7 +37,7 @@ const io = socketIO(server, {
         res.writeHead(200, headers);
         res.end();
     },
-    maxHttpBufferSize: 2e6,
+    maxHttpBufferSize: 10e6,
     pingTimeout: 10000
 });
 
@@ -98,8 +98,7 @@ io.on('connection', socket => {
     socket.on('disconnect', (reason, details) => {
         serverDebug(
             `${socket.id} was disconnected from url ${socket.conn.request.url} for the following reason: ${reason}
-            ${details?.message}
-            ${details?.description}`
+            ${JSON.stringify(details)}`
         );
         socket.removeAllListeners();
     });
