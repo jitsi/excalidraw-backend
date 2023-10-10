@@ -2,7 +2,7 @@ import debug from 'debug';
 import dotenv from 'dotenv';
 import express from 'express';
 import http from 'http';
-import socketIO from 'socket.io';
+import socketIO, { Socket } from 'socket.io';
 import * as prometheus from 'socket.io-prometheus-metrics';
 
 const serverDebug = debug('server');
@@ -15,6 +15,8 @@ dotenv.config(
 
 const app = express();
 const port = process.env.PORT || 80; // default port to listen
+const users: Socket[] = [];
+const userLimit = Number(process.env.USER_LIMIT) || Infinity;
 
 app.get('/', (req, res) => {
     res.send('Excalidraw backend is up :)');
@@ -52,6 +54,22 @@ io.on('connection', socket => {
     socket.on('join-room', roomID => {
         serverDebug(`${socket.id} has joined ${roomID} for url ${socket.conn.request.url}`);
         socket.join(roomID);
+
+        users.push(socket);
+        socket.on('close', () => {
+            users.splice(users.indexOf(socket), 1);
+        });
+
+        const socketsCount = Object.keys(io.in(roomID).sockets).length;
+
+        if (socketsCount > userLimit) {
+            users.forEach((user: Socket) => {
+                user.disconnect();
+            });
+
+            return;
+        }
+
         if (io.sockets.adapter.rooms[roomID].length <= 1) {
             io.to(`${socket.id}`).emit('first-in-room');
         } else {
