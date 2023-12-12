@@ -60,11 +60,14 @@ io.on('connection', socket => {
             users.splice(users.indexOf(socket), 1);
         });
 
-        const socketsCount = Object.keys(io.in(roomID).sockets).length;
+        const clients = Object.keys(io.sockets.adapter.rooms[roomID].sockets);
 
-        if (socketsCount > userLimit) {
-            users.forEach((user: Socket) => {
-                user.disconnect();
+        if (clients.length > userLimit) {
+            clients.forEach((clientKey: string) => {
+                const clientSocket = io.sockets.connected[clientKey];
+
+                serverDebug(`${clientSocket} has left the ${roomID} room because the user limit was reached.`);
+                clientSocket.leave(roomID);
             });
 
             return;
