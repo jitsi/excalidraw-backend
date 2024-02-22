@@ -39,8 +39,8 @@ const io = socketIO(server, {
         res.writeHead(200, headers);
         res.end();
     },
-    maxHttpBufferSize: 10e6,
-    pingTimeout: 10000
+    maxHttpBufferSize: 20e6,
+    pingTimeout: 60000
 });
 
 // listens on host:9090/metrics
