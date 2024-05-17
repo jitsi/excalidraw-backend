@@ -2,7 +2,7 @@ import debug from 'debug';
 import dotenv from 'dotenv';
 import express from 'express';
 import http from 'http';
-import socketIO, { Socket } from 'socket.io';
+import { Socket, Server } from 'socket.io';
 import * as prometheus from 'socket.io-prometheus-metrics';
 
 const serverDebug = debug('server');
@@ -28,25 +28,22 @@ server.listen(port, () => {
     serverDebug(`listening on port: ${port}`);
 });
 
-const io = socketIO(server, {
-    handlePreflightRequest: (req, res) => {
-        const headers = {
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Access-Control-Allow-Origin': req.header?.origin ?? 'https://meet.jit.si',
-            'Access-Control-Allow-Credentials': true
-        };
+const corsOptions = { 
+                    origin: process.env.CORS_ORIGIN,
+                    methods: ["GET", "POST"],
+};
 
-        res.writeHead(200, headers);
-        res.end();
-    },
+const io = new Server(server, {
+    allowEIO3: true,
+    cors: corsOptions,
     maxHttpBufferSize: 20e6,
     pingTimeout: 60000
 });
 
 // listens on host:9090/metrics
-prometheus.metrics(io, {
-    collectDefaultMetrics: true
-});
+//prometheus.metrics(io, {
+//    collectDefaultMetrics: true
+//});
 
 io.on('connection', socket => {
     serverDebug(`connection established! ${socket.conn.request.url}`);
@@ -60,27 +57,25 @@ io.on('connection', socket => {
             users.splice(users.indexOf(socket), 1);
         });
 
-        const clients = Object.keys(io.sockets.adapter.rooms[roomID].sockets);
+        const clients = Object.keys(io.sockets.adapter.rooms.get(roomID)?.keys() ??new Set<string>());
 
         if (clients.length > userLimit) {
             clients.forEach((clientKey: string) => {
-                const clientSocket = io.sockets.connected[clientKey];
-
-                serverDebug(`${clientSocket} has left the ${roomID} room because the user limit was reached.`);
-                clientSocket.leave(roomID);
+                const clientSocket = io.sockets.sockets.get(clientKey); 
+                if (clientSocket !== undefined) {
+                    serverDebug(`${clientSocket} has left the ${roomID} room because the user limit was reached.`);
+                    clientSocket.leave(roomID);
+                }
             });
-
             return;
         }
-
-        if (io.sockets.adapter.rooms[roomID].length <= 1) {
+        if (io.sockets.adapter.rooms.get(roomID)?.size ?? 0 <= 1) {
             io.to(`${socket.id}`).emit('first-in-room');
         } else {
             socket.broadcast.to(roomID).emit('new-user', socket.id);
         }
         io.in(roomID).emit(
-            'room-user-change',
-            Object.keys(io.sockets.adapter.rooms[roomID].sockets)
+            'room-user-change', Array.from(io.sockets.adapter.rooms.get(roomID) ?? [])
         );
     });
 
@@ -104,8 +99,8 @@ io.on('connection', socket => {
         const rooms = io.sockets.adapter.rooms;
 
         for (const roomID of Object.keys(socket.rooms)) {
-            const clients = Object.keys(rooms[roomID].sockets).filter(id => id !== socket.id);
-
+            const clients = Array.from(rooms.get(roomID) ?? []).filter(id => id !== socket.id);
+                        
             if (roomID !== socket.id) {
                 socket.to(roomID).emit('user has left', socket.id);
             }
