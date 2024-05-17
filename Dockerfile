@@ -1,4 +1,4 @@
-FROM node:16.17-slim
+FROM node:22-bookworm-slim
 
 WORKDIR /excalidraw-backend
 
