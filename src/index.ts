@@ -15,6 +15,7 @@ dotenv.config(
 
 const app = express();
 const port = process.env.PORT || 80; // default port to listen
+const prometheusPort = process.env.PROMETHEUS_PORT || 9090;
 const users: Socket[] = [];
 const userLimit = Number(process.env.USER_LIMIT) || Infinity;
 
@@ -43,9 +44,10 @@ const io = socketIO(server, {
     pingTimeout: 60000
 });
 
-// listens on host:9090/metrics
+// listens on the specified port under /metrics
 prometheus.metrics(io, {
-    collectDefaultMetrics: true
+    collectDefaultMetrics: true,
+    port: prometheusPort,
 });
 
 io.on('connection', socket => {
