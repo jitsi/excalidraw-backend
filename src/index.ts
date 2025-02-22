@@ -3,8 +3,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import http from 'http';
 import { Server, Socket } from 'socket.io';
-
-// import * as prometheus from 'socket.io-prometheus-metrics';
+import * as prometheus from 'socket.io-prometheus-metrics';
 
 const serverDebug = debug('server');
 
@@ -32,7 +31,7 @@ server.listen(port, () => {
 const io = new Server(server, {
     cors: {
         origin: [ 'https://meet.jit.si', 'http://localhost:3002/' ],
-        methods: [ 'GET', 'POST' ], // not sure about this
+        methods: [ 'GET', 'POST' ],
         allowedHeaders: 'Content-Type,Authorization',
         credentials: true
     },
@@ -42,13 +41,9 @@ const io = new Server(server, {
 
 
 // listens on host:9090/metrics
-console.log('Rooms before initializing metrics:', io.sockets.adapter.rooms);
-
-// eslint-disable-next-line max-len
-// Currently its failing - TypeError: Cannot convert undefined or null to object - socket.io-prometheus-metrics/dist/index.js:154:16
-// prometheus.metrics(io, {
-//     collectDefaultMetrics: true
-// });
+prometheus.metrics(io, {
+    collectDefaultMetrics: true
+});
 
 io.on('connection', (socket: Socket) => {
     serverDebug(`connection established! ${socket.conn.request.url}`);
