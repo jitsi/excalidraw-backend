@@ -2,8 +2,9 @@ import debug from 'debug';
 import dotenv from 'dotenv';
 import express from 'express';
 import http from 'http';
-import socketIO, { Socket } from 'socket.io';
-import * as prometheus from 'socket.io-prometheus-metrics';
+import { Server, Socket } from 'socket.io';
+
+// import * as prometheus from 'socket.io-prometheus-metrics';
 
 const serverDebug = debug('server');
 
@@ -28,30 +29,31 @@ server.listen(port, () => {
     serverDebug(`listening on port: ${port}`);
 });
 
-const io = socketIO(server, {
-    handlePreflightRequest: (req, res) => {
-        const headers = {
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Access-Control-Allow-Origin': req.header?.origin ?? 'https://meet.jit.si',
-            'Access-Control-Allow-Credentials': true
-        };
-
-        res.writeHead(200, headers);
-        res.end();
+const io = new Server(server, {
+    cors: {
+        origin: [ 'https://meet.jit.si', 'http://localhost:3002/' ],
+        methods: [ 'GET', 'POST' ], // not sure about this
+        allowedHeaders: 'Content-Type,Authorization',
+        credentials: true
     },
     maxHttpBufferSize: 20e6,
     pingTimeout: 60000
 });
 
-// listens on host:9090/metrics
-prometheus.metrics(io, {
-    collectDefaultMetrics: true
-});
 
-io.on('connection', socket => {
+// listens on host:9090/metrics
+console.log('Rooms before initializing metrics:', io.sockets.adapter.rooms);
+
+// eslint-disable-next-line max-len
+// Currently its failing - TypeError: Cannot convert undefined or null to object - socket.io-prometheus-metrics/dist/index.js:154:16
+// prometheus.metrics(io, {
+//     collectDefaultMetrics: true
+// });
+
+io.on('connection', (socket: Socket) => {
     serverDebug(`connection established! ${socket.conn.request.url}`);
     io.to(`${socket.id}`).emit('init-room');
-    socket.on('join-room', roomID => {
+    socket.on('join-room', (roomID: string) => {
         serverDebug(`${socket.id} has joined ${roomID} for url ${socket.conn.request.url}`);
         socket.join(roomID);
 
@@ -60,27 +62,32 @@ io.on('connection', socket => {
             users.splice(users.indexOf(socket), 1);
         });
 
-        const clients = Object.keys(io.sockets.adapter.rooms[roomID].sockets);
+        // const clients = Object.keys(io.sockets.adapter.rooms[roomID].sockets);
+        const clientApadpter = io.sockets.adapter.rooms.get(roomID);
+        const clients = Array.from(clientApadpter || []);
+
 
         if (clients.length > userLimit) {
             clients.forEach((clientKey: string) => {
-                const clientSocket = io.sockets.connected[clientKey];
+                const clientSocket = io.sockets.sockets.get(clientKey);
 
-                serverDebug(`${clientSocket} has left the ${roomID} room because the user limit was reached.`);
-                clientSocket.leave(roomID);
+                if (clientSocket !== undefined) {
+                    serverDebug(`${clientSocket} has left the ${roomID} room because the user limit was reached.`);
+                    clientSocket.leave(roomID);
+                }
             });
 
             return;
         }
 
-        if (io.sockets.adapter.rooms[roomID].length <= 1) {
+        if (clientApadpter !== undefined && clientApadpter.size <= 1) {
             io.to(`${socket.id}`).emit('first-in-room');
         } else {
             socket.broadcast.to(roomID).emit('new-user', socket.id);
         }
         io.in(roomID).emit(
             'room-user-change',
-            Object.keys(io.sockets.adapter.rooms[roomID].sockets)
+            clients
         );
     });
 
@@ -104,7 +111,11 @@ io.on('connection', socket => {
         const rooms = io.sockets.adapter.rooms;
 
         for (const roomID of Object.keys(socket.rooms)) {
-            const clients = Object.keys(rooms[roomID].sockets).filter(id => id !== socket.id);
+            const clientAdapter = rooms.get(roomID);
+
+            const clients = Array.from(clientAdapter || []).filter(id => id !== socket.id);
+
+            // clients = Object.keys(rooms[roomID].sockets).filter(id => id !== socket.id);
 
             if (roomID !== socket.id) {
                 socket.to(roomID).emit('user has left', socket.id);
