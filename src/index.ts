@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 import express from 'express';
 import http from 'http';
 import { Server, Socket } from 'socket.io';
-import * as prometheus from 'socket.io-prometheus-metrics';
+
+import { metrics } from './prometheus';
 
 const serverDebug = debug('server');
 
@@ -41,7 +42,7 @@ const io = new Server(server, {
 
 
 // listens on host:9090/metrics
-prometheus.metrics(io, {
+metrics(io, {
     collectDefaultMetrics: true
 });
 
