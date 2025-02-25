@@ -31,9 +31,9 @@ server.listen(port, () => {
 
 const io = new Server(server, {
     cors: {
-        origin: [ 'https://meet.jit.si', 'http://localhost:3002/' ],
+        origin: '*',
         methods: [ 'GET', 'POST' ],
-        allowedHeaders: 'Content-Type,Authorization',
+        allowedHeaders: [ 'Content-Type', 'Authorization' ],
         credentials: true
     },
     maxHttpBufferSize: 20e6,
@@ -58,7 +58,6 @@ io.on('connection', (socket: Socket) => {
             users.splice(users.indexOf(socket), 1);
         });
 
-        // const clients = Object.keys(io.sockets.adapter.rooms[roomID].sockets);
         const clientApadpter = io.sockets.adapter.rooms.get(roomID);
         const clients = Array.from(clientApadpter || []);
 
@@ -110,8 +109,6 @@ io.on('connection', (socket: Socket) => {
             const clientAdapter = rooms.get(roomID);
 
             const clients = Array.from(clientAdapter || []).filter(id => id !== socket.id);
-
-            // clients = Object.keys(rooms[roomID].sockets).filter(id => id !== socket.id);
 
             if (roomID !== socket.id) {
                 socket.to(roomID).emit('user has left', socket.id);
