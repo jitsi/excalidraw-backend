@@ -27,3 +27,9 @@ jobs:
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
             commit_message: Bump version
+      - name: release
+        uses: softprops/action-gh-release@v2
+        with:
+            tag_name: ${{ github.event.inputs.version }}
+            generate_release_notes: true
+            make_latest: true
