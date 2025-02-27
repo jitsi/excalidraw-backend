@@ -1,6 +1,6 @@
 {
     "name": "excalidraw-backend",
-    "version": "2025.2.0",
+    "version": "2025.2.1",
     "main": "src/index.js",
     "description": "Excalidraw backend",
     "repository": {
