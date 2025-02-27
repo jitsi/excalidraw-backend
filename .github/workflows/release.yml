@@ -1,0 +1,28 @@
+name: "Release"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version number
+        required: true
+        type: string
+
+jobs:
+  auto-publish:
+    name: "AutoPublish"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout source code"
+        uses: "actions/checkout@v4"
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install
+      - run: npm run build
+      - run: npm version ${{ github.event.inputs.version }}
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+            commit_message: Bump version
