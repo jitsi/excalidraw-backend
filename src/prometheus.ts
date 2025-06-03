@@ -1,7 +1,26 @@
+ /*
+ * Copyright 2023 UNIwise
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import * as http from 'http';
 import express from 'express';
 import * as io from 'socket.io';
 import * as prom from 'prom-client';
+
+const port = process.env.PROMETHEUS_PORT || 9090;
+
 
 export function metrics(ioServer: io.Server, options?: IMetricsOptions) {
     return new SocketIOMetrics(ioServer, options);
@@ -39,7 +58,7 @@ export class SocketIOMetrics {
     private boundNamespaces = new Set();
 
     private defaultOptions: IMetricsOptions = {
-        port: 9090,
+        port: port,
         path: '/metrics',
         createServer: true,
         collectDefaultMetrics: false,
@@ -171,7 +190,7 @@ export class SocketIOMetrics {
             socket.emit = (event: string, ...data: any[]) => {
                 if (!blacklisted_events.has(event)) {
                     let labelsWithEvent = { event: event, ...labels };
-                    this.metrics.bytesTransmitted.inc(labelsWithEvent, this.dataToBytes(data));
+                    this.metrics.bytesTransmitted.inc(labelsWithEvent, this.dataToByteLength(data));
                     this.metrics.eventsSentTotal.inc(labelsWithEvent);
                 }
 
@@ -189,7 +208,7 @@ export class SocketIOMetrics {
                         this.metrics.errorsTotal.inc(labels);
                     } else if (!blacklisted_events.has(event)) {
                         let labelsWithEvent = { event: event, ...labels };
-                        this.metrics.bytesReceived.inc(labelsWithEvent, this.dataToBytes(data));
+                        this.metrics.bytesReceived.inc(labelsWithEvent, this.dataToByteLength(data));
                         this.metrics.eventsReceivedTotal.inc(labelsWithEvent);
                     }
                 }
@@ -226,7 +245,7 @@ export class SocketIOMetrics {
     * Helping methods
     */
 
-    private dataToBytes(data: any) {
+    private dataToByteLength(data: any) {
         try {
             return Buffer.byteLength((typeof data === 'string') ? data : JSON.stringify(data) || '', 'utf8');
         } catch (e) {
