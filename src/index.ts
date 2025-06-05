@@ -43,7 +43,6 @@ const io = new SocketIO(server, {
     cors: {
       allowedHeaders: ['Content-Type', 'Authorization'],
       origin: process.env.CORS_ORIGIN || '*',
-      credentials: true,
     },
     allowEIO3: true,
     maxHttpBufferSize: 20e6,
