@@ -1,4 +1,4 @@
- /*
+/*
  * Copyright 2023 UNIwise
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,37 +14,38 @@
  * limitations under the License.
  */
 
-import * as http from 'http';
 import express from 'express';
-import * as io from 'socket.io';
+import * as http from 'http';
 import * as prom from 'prom-client';
+import * as io from 'socket.io';
 
 const port = process.env.PROMETHEUS_PORT || 9090;
 
 
-export function metrics(ioServer: io.Server, options?: IMetricsOptions) {
-    return new SocketIOMetrics(ioServer, options);
-}
-
 export interface IMetricsOptions {
-    port?: number | string;
+    checkForNewNamespaces?: boolean;
+    collectDefaultMetrics?: boolean;
+    createServer?: boolean;
     path?: string;
-    createServer?: boolean,
-    collectDefaultMetrics?: boolean
-    checkForNewNamespaces?: boolean
+    port?: number | string;
 }
 
 export interface IMetrics {
-    connectedSockets: prom.Gauge;
-    connectTotal: prom.Counter;
-    disconnectTotal: prom.Counter;
-    eventsReceivedTotal: prom.Counter;
-    eventsSentTotal: prom.Counter;
     bytesReceived: prom.Counter;
     bytesTransmitted: prom.Counter;
+    connectTotal: prom.Counter;
+    connectedSockets: prom.Gauge;
+    disconnectTotal: prom.Counter;
     errorsTotal: prom.Counter;
+    eventsReceivedTotal: prom.Counter;
+    eventsSentTotal: prom.Counter;
 }
 
+/**
+ * Shuts down the Express HTTP server exposing the metrics.
+ *
+ * @returns {Promise<void>}
+ */
 export class SocketIOMetrics {
     public register: prom.Registry;
     public metrics!: IMetrics;
@@ -58,15 +59,21 @@ export class SocketIOMetrics {
     private boundNamespaces = new Set();
 
     private defaultOptions: IMetricsOptions = {
-        port: port,
+        port,
         path: '/metrics',
         createServer: true,
         collectDefaultMetrics: false,
         checkForNewNamespaces: true
     };
 
+    /**
+     * Constructs a new instance of the SocketIOMetrics class.
+     * @param {io.Server} ioServer - The Socket.IO server instance to monitor.
+     * @param {IMetricsOptions} [options] - Optional configuration for metrics setup.
+     */
     constructor(ioServer: io.Server, options?: IMetricsOptions) {
-        this.options = { ...this.defaultOptions, ...options };
+        this.options = { ...this.defaultOptions,
+            ...options };
         this.ioServer = ioServer;
         this.register = prom.register;
 
@@ -88,24 +95,39 @@ export class SocketIOMetrics {
     * Metrics Server
     */
 
+    /**
+     * Starts the server if it is not already running.
+     *
+     * @returns {void}
+     */
     public start() {
         if (!this.expressServer || !this.expressServer.listening) {
             this.initServer();
         }
     }
 
+    /**
+     * Closes the express server.
+     * @returns {Promise<void>} A promise that resolves when the server has been closed.
+     */
     public async close() {
         return this.expressServer.close();
     }
 
+    /**
+     * Initializes the Express server and sets up a route for serving Prometheus metrics.
+     * @returns {void}
+     */
     private initServer() {
         this.express = express();
         this.expressServer = this.express.listen(this.options.port);
         const path = this.options.path || '/metrics';
+
         this.express.get(path, async (_req: express.Request, res: express.Response) => {
             res.set('Content-Type', this.register.contentType);
-            const metrics = await this.register.metrics();
-            res.end(metrics);
+            const metricsResult = await this.register.metrics();
+
+            res.end(metricsResult);
         });
     }
 
@@ -113,6 +135,11 @@ export class SocketIOMetrics {
     * Metrics logic
     */
 
+
+    /**
+     * Initializes Prometheus metrics for Socket.IO monitoring.
+     * @returns {void}
+     */
     private initMetrics() {
         this.metrics = {
             connectedSockets: new prom.Gauge({
@@ -123,49 +150,55 @@ export class SocketIOMetrics {
             connectTotal: new prom.Counter({
                 name: 'socket_io_connect_total',
                 help: 'Total count of socket.io connection requests',
-                labelNames: ['namespace']
+                labelNames: [ 'namespace' ]
             }),
 
             disconnectTotal: new prom.Counter({
                 name: 'socket_io_disconnect_total',
                 help: 'Total count of socket.io disconnections',
-                labelNames: ['namespace']
+                labelNames: [ 'namespace' ]
             }),
 
             eventsReceivedTotal: new prom.Counter({
                 name: 'socket_io_events_received_total',
                 help: 'Total count of socket.io received events',
-                labelNames: ['event', 'namespace']
+                labelNames: [ 'event', 'namespace' ]
             }),
 
             eventsSentTotal: new prom.Counter({
                 name: 'socket_io_events_sent_total',
                 help: 'Total count of socket.io sent events',
-                labelNames: ['event', 'namespace']
+                labelNames: [ 'event', 'namespace' ]
             }),
 
             bytesReceived: new prom.Counter({
                 name: 'socket_io_receive_bytes',
                 help: 'Total socket.io bytes received',
-                labelNames: ['event', 'namespace']
+                labelNames: [ 'event', 'namespace' ]
             }),
 
             bytesTransmitted: new prom.Counter({
                 name: 'socket_io_transmit_bytes',
                 help: 'Total socket.io bytes transmitted',
-                labelNames: ['event', 'namespace']
+                labelNames: [ 'event', 'namespace' ]
             }),
 
             errorsTotal: new prom.Counter({
                 name: 'socket_io_errors_total',
                 help: 'Total socket.io errors',
-                labelNames: ['namespace']
+                labelNames: [ 'namespace' ]
             })
         };
     }
 
-    private bindMetricsOnEmitter(server: NodeJS.EventEmitter, labels: { [key: string]: string }) {
-        const blacklisted_events = new Set([
+    /**
+     * Binds Prometheus metrics to the provided server's event emitter.
+     * @param {NodeJS.EventEmitter} server - The event emitter to bind metrics to.
+     * @param {Record<string, string>} labels - A record of labels to associate with the metrics.
+     * @returns {void}
+     */
+    private bindMetricsOnEmitter(server: NodeJS.EventEmitter, labels: Record<string, string>): void {
+        const blacklistedEvents = new Set([
             'error',
             'connect',
             'disconnect',
@@ -177,64 +210,83 @@ export class SocketIOMetrics {
         server.on('connect', (socket: any) => {
             // Connect events
             this.metrics.connectTotal.inc(labels);
-            this.metrics.connectedSockets.set((this.ioServer.engine as any).clientsCount);
+            this.metrics.connectedSockets.set(this.ioServer.engine.clientsCount);
 
             // Disconnect events
             socket.on('disconnect', () => {
                 this.metrics.disconnectTotal.inc(labels);
-                this.metrics.connectedSockets.set((this.ioServer.engine as any).clientsCount);
+                this.metrics.connectedSockets.set(this.ioServer.engine.clientsCount);
             });
 
             // Hook into emit (outgoing event)
-            const org_emit = socket.emit;
+            const orgEmit = socket.emit;
+
             socket.emit = (event: string, ...data: any[]) => {
-                if (!blacklisted_events.has(event)) {
-                    let labelsWithEvent = { event: event, ...labels };
+                if (!blacklistedEvents.has(event)) {
+                    const labelsWithEvent = { event,
+                        ...labels };
+
                     this.metrics.bytesTransmitted.inc(labelsWithEvent, this.dataToByteLength(data));
                     this.metrics.eventsSentTotal.inc(labelsWithEvent);
                 }
 
-                return org_emit.apply(socket, [event, ...data]);
+                return orgEmit.apply(socket, [ event, ...data ]);
             };
 
             // Hook into onevent (incoming event)
-            const org_onevent = socket.onevent;
+            const orgOnEvent = socket.onevent;
+
             socket.onevent = (packet: any) => {
-                if (packet && packet.data) {
-                    const [event, data] = packet.data;
+                if (packet?.data) {
+                    const [ event, data ] = packet.data;
 
                     if (event === 'error') {
-                        this.metrics.connectedSockets.set((this.ioServer.engine as any).clientsCount);
+                        this.metrics.connectedSockets.set(this.ioServer.engine.clientsCount);
                         this.metrics.errorsTotal.inc(labels);
-                    } else if (!blacklisted_events.has(event)) {
-                        let labelsWithEvent = { event: event, ...labels };
+                    } else if (!blacklistedEvents.has(event)) {
+                        const labelsWithEvent = { event,
+                            ...labels };
+
                         this.metrics.bytesReceived.inc(labelsWithEvent, this.dataToByteLength(data));
                         this.metrics.eventsReceivedTotal.inc(labelsWithEvent);
                     }
                 }
 
-                return org_onevent.call(socket, packet);
+                return orgOnEvent.call(socket, packet);
             };
         });
     }
 
+
+    /**
+     * Binds metrics to a specific namespace within the server if not already bound.
+     * @param {io.Server} server - The Socket.IO server instance.
+     * @param {string} namespace - The namespace string to bind metrics to.
+     * @returns {void}
+     */
     private bindNamespaceMetrics(server: io.Server, namespace: string) {
         if (this.boundNamespaces.has(namespace)) {
             return;
         }
         const namespaceServer = server.of(namespace);
-        this.bindMetricsOnEmitter(namespaceServer, { namespace: namespace });
+
+        this.bindMetricsOnEmitter(namespaceServer, { namespace });
         this.boundNamespaces.add(namespace);
     }
 
+    /**
+     * Binds metrics to all existing namespaces in the ioServer
+     * and optionally checks for new namespaces at regular intervals.
+     * @returns {void}
+     */
     private bindMetrics() {
-        Object.keys(this.ioServer._nsps).forEach((nsp) =>
+        Object.keys(this.ioServer._nsps).forEach(nsp =>
             this.bindNamespaceMetrics(this.ioServer, nsp)
         );
 
         if (this.options.checkForNewNamespaces) {
             setInterval(() => {
-                Object.keys(this.ioServer._nsps).forEach((nsp) =>
+                Object.keys(this.ioServer._nsps).forEach(nsp =>
                     this.bindNamespaceMetrics(this.ioServer, nsp)
                 );
             }, 2000);
@@ -245,11 +297,27 @@ export class SocketIOMetrics {
     * Helping methods
     */
 
+    /**
+     * Calculates the byte length of the given data in UTF-8 encoding.
+     * @param {any} data - The input data to calculate the byte length for. Can be a string or any serializable object.
+     * @returns {number} The byte length of the input data in UTF-8 encoding, or 0 if an error occurs.
+     */
     private dataToByteLength(data: any) {
         try {
-            return Buffer.byteLength((typeof data === 'string') ? data : JSON.stringify(data) || '', 'utf8');
+            return Buffer.byteLength(typeof data === 'string' ? data : JSON.stringify(data) || '', 'utf8');
         } catch (e) {
             return 0;
         }
     }
+}
+
+
+/**
+ * Creates a metrics collector for Socket.IO server.
+ * @param {io.Server} ioServer - The Socket.IO server instance to monitor.
+ * @param {IMetricsOptions} [options] - Optional for metrics collection.
+ * @returns {SocketIOMetrics} A new SocketIOMetrics instance.
+ */
+export function metrics(ioServer: io.Server, options?: IMetricsOptions) {
+    return new SocketIOMetrics(ioServer, options);
 }
