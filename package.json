@@ -29,7 +29,7 @@
     "license": "MIT",
     "scripts": {
         "build": "tsc",
-        "lint": "eslint '**/*.{js,ts,tsx}'",
+        "lint": "npm run lint-fix && eslint '**/*.{js,ts,tsx}'",
         "lint-fix": "eslint . --fix",
         "start": "tsc && node dist/index.js",
         "start:local": "tsc && DEBUG='engine,app,socket.io:client,server' node dist/index.js",
