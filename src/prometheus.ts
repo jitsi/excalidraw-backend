@@ -193,11 +193,11 @@ export class SocketIOMetrics {
 
     /**
      * Binds Prometheus metrics to the provided server's event emitter.
-     * @param {NodeJS.EventEmitter} server - The event emitter to bind metrics to.
+     * @param {io.Namespace} server - The event emitter to bind metrics to.
      * @param {Record<string, string>} labels - A record of labels to associate with the metrics.
      * @returns {void}
      */
-    private bindMetricsOnEmitter(server: NodeJS.EventEmitter, labels: Record<string, string>): void {
+    private bindMetricsOnEmitter(server: io.Namespace, labels: Record<string, string>): void {
         const blacklistedEvents = new Set([
             'error',
             'connect',
