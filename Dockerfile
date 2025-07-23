@@ -1,9 +1,14 @@
-FROM node:16.17-slim
+FROM node:22-slim
 
 WORKDIR /excalidraw-backend
 
-COPY package.json package-lock.json tsconfig.json src ./
-RUN npm install
+COPY package*.json ./
+
+RUN npm ci
+
+COPY tsconfig.json ./
+COPY src ./src
+
 RUN npm run build
 
 EXPOSE 80
