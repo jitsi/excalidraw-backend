@@ -59,8 +59,6 @@ jobs:
             jitsi/excalidraw-backend:${{ github.event.inputs.version }}
             jitsi/excalidraw-backend:latest
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
