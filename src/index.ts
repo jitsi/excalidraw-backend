@@ -7,12 +7,12 @@ import { Server as SocketIO } from 'socket.io';
 import { metrics } from './prometheus';
 
 type UserToFollow = {
-  socketId: string;
-  username: string;
+    socketId: string;
+    username: string;
 };
 type OnUserFollowedPayload = {
-  action: 'FOLLOW' | 'UNFOLLOW';
-  userToFollow: UserToFollow;
+    action: 'FOLLOW' | 'UNFOLLOW';
+    userToFollow: UserToFollow;
 };
 
 const serverDebug = debug('server');
