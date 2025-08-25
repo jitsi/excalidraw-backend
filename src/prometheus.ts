@@ -68,6 +68,7 @@ export class SocketIOMetrics {
 
     /**
      * Constructs a new instance of the SocketIOMetrics class.
+     *
      * @param {io.Server} ioServer - The Socket.IO server instance to monitor.
      * @param {IMetricsOptions} [options] - Optional configuration for metrics setup.
      */
@@ -101,13 +102,14 @@ export class SocketIOMetrics {
      * @returns {void}
      */
     public start() {
-        if (!this.expressServer || !this.expressServer.listening) {
+        if (!this.expressServer?.listening) {
             this.initServer();
         }
     }
 
     /**
      * Closes the express server.
+     *
      * @returns {Promise<void>} A promise that resolves when the server has been closed.
      */
     public async close() {
@@ -116,6 +118,7 @@ export class SocketIOMetrics {
 
     /**
      * Initializes the Express server and sets up a route for serving Prometheus metrics.
+     *
      * @returns {void}
      */
     private initServer() {
@@ -138,6 +141,7 @@ export class SocketIOMetrics {
 
     /**
      * Initializes Prometheus metrics for Socket.IO monitoring.
+     *
      * @returns {void}
      */
     private initMetrics() {
@@ -193,6 +197,7 @@ export class SocketIOMetrics {
 
     /**
      * Binds Prometheus metrics to the provided server's event emitter.
+     *
      * @param {io.Namespace} server - The event emitter to bind metrics to.
      * @param {Record<string, string>} labels - A record of labels to associate with the metrics.
      * @returns {void}
@@ -260,6 +265,7 @@ export class SocketIOMetrics {
 
     /**
      * Binds metrics to a specific namespace within the server if not already bound.
+     *
      * @param {io.Server} server - The Socket.IO server instance.
      * @param {string} namespace - The namespace string to bind metrics to.
      * @returns {void}
@@ -277,6 +283,7 @@ export class SocketIOMetrics {
     /**
      * Binds metrics to all existing namespaces in the ioServer
      * and optionally checks for new namespaces at regular intervals.
+     *
      * @returns {void}
      */
     private bindMetrics() {
@@ -299,6 +306,7 @@ export class SocketIOMetrics {
 
     /**
      * Calculates the byte length of the given data in UTF-8 encoding.
+     *
      * @param {unknown} data - The input data to calculate the byte length for.
      * Can be a string or any serializable object.
      * @returns {number} The byte length of the input data in UTF-8 encoding, or 0 if an error occurs.
@@ -318,6 +326,7 @@ export class SocketIOMetrics {
 
 /**
  * Creates a metrics collector for Socket.IO server.
+ *
  * @param {io.Server} ioServer - The Socket.IO server instance to monitor.
  * @param {IMetricsOptions} [options] - Optional for metrics collection.
  * @returns {SocketIOMetrics} A new SocketIOMetrics instance.

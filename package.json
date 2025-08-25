@@ -26,14 +26,14 @@
     "license": "MIT",
     "scripts": {
         "build": "tsc",
-        "lint": "npm run lint-fix && npx eslint . --ext .js,.ts,.tsx",
+        "lint": "npx eslint . --ext .js,.ts,.tsx && npx tsc --noEmit",
         "lint-fix": "npx eslint . --ext .js,.ts,.tsx --fix",
         "start": "tsc && node dist/index.js",
         "start:local": "tsc && cross-env DEBUG=engine,app,socket.io:client,server node dist/index.js",
         "start:dev": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only src/index.ts"
     },
     "devDependencies": {
-        "@jitsi/eslint-config": "4.1.0",
+        "@jitsi/eslint-config": "^6.0.4",
         "@types/express": "^5.0.3",
         "@types/node": "^24.3.0",
         "@typescript-eslint/eslint-plugin": "^8.40.0",
