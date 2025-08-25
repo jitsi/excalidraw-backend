@@ -299,13 +299,17 @@ export class SocketIOMetrics {
 
     /**
      * Calculates the byte length of the given data in UTF-8 encoding.
-     * @param {any} data - The input data to calculate the byte length for. Can be a string or any serializable object.
+     * @param {unknown} data - The input data to calculate the byte length for.
+     * Can be a string or any serializable object.
      * @returns {number} The byte length of the input data in UTF-8 encoding, or 0 if an error occurs.
      */
-    private dataToByteLength(data: any) {
+    private dataToByteLength(data: unknown): number {
         try {
-            return Buffer.byteLength(typeof data === 'string' ? data : JSON.stringify(data) || '', 'utf8');
-        } catch (e) {
+            return Buffer.byteLength(
+                typeof data === 'string' ? data : JSON.stringify(data) || '',
+                'utf8'
+            );
+        } catch {
             return 0;
         }
     }

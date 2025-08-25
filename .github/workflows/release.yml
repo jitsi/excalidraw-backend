@@ -1,4 +1,4 @@
-name: "Release"
+name: Release
 
 on:
   workflow_dispatch:
@@ -15,30 +15,43 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: "Checkout source code"
+      - name: Checkout source code
         uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - run: npm ci
       - run: npm version ${{ github.event.inputs.version }} --no-commit-hooks --no-git-tag-version
-      - run: npm install
       - run: npm run build
+
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-            commit_message: Bump version
-      - name: Set up QEMU
+          commit_message: Bump version
+
+      - name: Setup QEMU and Docker Buildx
         uses: docker/setup-qemu-action@v3
         with:
           platforms: linux/amd64,linux/arm64
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: docker release
+
+      - name: Docker release
         uses: docker/build-push-action@v6
         with:
           push: true
@@ -48,9 +61,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: release
+
+      - name: GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-            tag_name: ${{ github.event.inputs.version }}
-            generate_release_notes: true
-            make_latest: true
+          tag_name: ${{ github.event.inputs.version }}
+          generate_release_notes: true
+          make_latest: true

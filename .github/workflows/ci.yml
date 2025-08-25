@@ -6,15 +6,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout source code"
+      - name: Checkout source code
         uses: actions/checkout@v4
-      - name: Use Node.js 22.x
+
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '22'
+          cache: 'npm'
+
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
       - name: Run linter
         run: npm run lint
+
       - name: Build
         run: npm run build
