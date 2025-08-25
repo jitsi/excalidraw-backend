@@ -11,4 +11,4 @@ module.exports = {
   rules: {
     "jsdoc/newline-after-description": "off",
   },
-}
+};
