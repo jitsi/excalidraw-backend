@@ -27,6 +27,7 @@ dotenv.config(
 
 const app = express();
 const port = process.env.PORT || (process.env.NODE_ENV === 'development' ? 3002 : 80); // default port to listen
+const userLimit = Number(process.env.USER_LIMIT) || Infinity;
 
 app.use(express.static('public'));
 
@@ -64,6 +65,15 @@ io.on('connection', socket => {
         serverDebug(`${socket.id} has joined ${roomID} for url ${socket.conn.request.url}`);
         await socket.join(roomID);
         const sockets = await io.in(roomID).fetchSockets();
+
+        if (sockets.length > userLimit) {
+            serverDebug(`${socket.id} rejected from ${roomID}: user limit (${userLimit}) reached`);
+            socket.emit('room-full');
+            socket.leave(roomID);
+            socket.disconnect(true);
+
+            return;
+        }
 
         if (sockets.length <= 1) {
             io.to(`${socket.id}`).emit('first-in-room');
