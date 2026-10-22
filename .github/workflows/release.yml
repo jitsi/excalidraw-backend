@@ -57,6 +57,11 @@ jobs:
       - name: Docker release
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
+          # Build from the checked-out workspace. Without this the action uses the
+          # Git context at the ref that started the workflow, which does not contain
+          # the version bump committed above, so package.json in the image keeps the
+          # previous version (same fix as jitsi/rtcstats-server#133).
+          context: .
           push: true
           tags: |
             jitsi/excalidraw-backend:${{ github.event.inputs.version }}
